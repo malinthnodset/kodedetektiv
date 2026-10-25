@@ -1,3 +1,5 @@
+*Beskrivelse også laget av Claude*
+
 # Kodedetektiv
 
 Et feilsøkingsspill i pixelart-stil, laget med ASP.NET Core (.NET 10).
