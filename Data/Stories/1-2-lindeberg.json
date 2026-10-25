@@ -1,0 +1,296 @@
+{
+  "id": "lindeberg",
+  "title": "Åpen dag på Lindeberg",
+  "difficulty": 1,
+  "hearts": 6,
+  "base": 100,
+  "sprite": "book",
+  "tagline": "Skolens nye nettside skal vises fram på åpen dag i morgen. Elevrådet har kodet den selv.",
+  "topics": [
+    "Anførselstegn",
+    "Typer",
+    "Skrivefeil i metode",
+    "Manglende return"
+  ],
+  "intro": [
+    "Rookie, denne saken er perfekt for deg.",
+    "Lindeberg videregående har åpen dag i morgen, og elevrådet har laget en ny nettside til anledningen. Problemet er at den ikke bygger.",
+    "Elevrådslederen, Sara, har sendt oss byggloggen. Fire feil, fire saker. La oss få siden klar før dørene åpner."
+  ],
+  "ending": [
+    "Nettsiden var oppe da dørene åpnet klokka ni.",
+    "Over 300 besøkende fant fram til riktig klasserom, og Sara har allerede meldt seg på programmeringsvalgfaget.",
+    "Elevrådet har lovet å bygge prosjektet før de sier at noe er ferdig. Godt jobbet, rookie."
+  ],
+  "cases": [
+    {
+      "title": "Strengen som aldri sluttet",
+      "brief": "Kvelden før åpen dag. Det første bygget feiler.",
+      "file": "Welcome.cs",
+      "witness": {
+        "who": "Sara, elevrådsleder",
+        "text": "Jeg skrev bare en velkomsttekst! Nå sier den noe om «newline in constant». Hva betyr det i det hele tatt?"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "Welcome.cs(5,21): error CS1010: Newline in constant",
+          "kind": ""
+        },
+        {
+          "text": "Welcome.cs(6,9): error CS1002: ; expected",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 2 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Welcome",
+        "{",
+        "    public string Message()",
+        "    {",
+        "        var title = \"Velkommen til åpen dag!;",
+        "        var time = \"Klokka 09:00-14:00\";",
+        "        return $\"{title} {time}\";",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        5
+      ],
+      "herrings": {
+        "6": "Denne linjen er pent avsluttet. Kompilatoren klager bare fordi den fortsatt tror den er inne i strengen fra linjen over.",
+        "7": "return-linjen er grei. Problemet starter tidligere."
+      },
+      "motives": [
+        {
+          "text": "Strengen mangler avsluttende anførselstegn, så semikolonet havner inne i teksten.",
+          "correct": true
+        },
+        {
+          "text": "Man kan ikke bruke utropstegn i en streng.",
+          "correct": false
+        },
+        {
+          "text": "var kan ikke brukes for tekst.",
+          "correct": false
+        }
+      ],
+      "explain": "Anførselstegnet etter «dag!» mangler. Kompilatoren tror derfor at semikolonet er en del av teksten, og leter etter slutten på strengen på neste linje. Det er derfor du får to feilmeldinger for én feil.",
+      "fix": "var title = \"Velkommen til åpen dag!\";",
+      "after": "Velkomstteksten vises. Men neste fil er allerede rød...",
+      "hint": "Tell anførselstegnene på hver linje. Hver tekst trenger et par."
+    },
+    {
+      "title": "Alder i anførselstegn",
+      "brief": "Påmeldingsskjemaet for omvisning bygger heller ikke.",
+      "file": "Visitor.cs",
+      "witness": {
+        "who": "Sara, elevrådsleder",
+        "text": "Kompilatoren sier at den ikke kan gjøre om string til int. Men 16 er jo et tall?"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "Visitor.cs(9,17): error CS0029: Cannot implicitly",
+          "kind": ""
+        },
+        {
+          "text": "  convert type 'string' to 'int'",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 1 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Visitor",
+        "{",
+        "    public string Name { get; set; }",
+        "    public int Age { get; set; }",
+        "",
+        "    public static Visitor Example()",
+        "    {",
+        "        var v = new Visitor();",
+        "        v.Age = \"16\";",
+        "        v.Name = \"Ola\";",
+        "        return v;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        9
+      ],
+      "herrings": {
+        "4": "Age er en int, og det passer fint for en alder. Hvem prøver å gi den noe annet?",
+        "8": "Objektet blir laget helt riktig. Feilen kommer når det skal fylles.",
+        "10": "Name er en string, og \"Ola\" er en string. Perfekt match."
+      },
+      "motives": [
+        {
+          "text": "\"16\" i anførselstegn er tekst, ikke et tall. En int kan ikke få en string.",
+          "correct": true
+        },
+        {
+          "text": "Alder må lagres som double.",
+          "correct": false
+        },
+        {
+          "text": "Properties kan ikke settes etter at objektet er laget.",
+          "correct": false
+        }
+      ],
+      "explain": "Alt i anførselstegn er en string, også \"16\". C# er strengt typet og gjør ikke om tekst til tall av seg selv. Fjern anførselstegnene:",
+      "fix": "v.Age = 16;",
+      "after": "Påmeldingen fungerer. To feil igjen, og klokka nærmer seg midnatt.",
+      "hint": "Hva er forskjellen på 16 og \"16\" i C#?"
+    },
+    {
+      "title": "Den lille l-en",
+      "brief": "Nå er det velkomstskjermen i resepsjonen som klager.",
+      "file": "Program.cs",
+      "witness": {
+        "who": "Elevrådets kasserer",
+        "text": "Jeg skrev av koden fra en tutorial. Den sier at Console ikke har noe som heter Writeline. Alle vet jo at Console kan skrive linjer!"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "Program.cs(7,17): error CS0117: 'Console' does not",
+          "kind": ""
+        },
+        {
+          "text": "  contain a definition for 'Writeline'",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 1 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Program",
+        "{",
+        "    public static void Main()",
+        "    {",
+        "        var visitors = 312;",
+        "        Console.WriteLine(\"Åpen dag starter!\");",
+        "        Console.Writeline($\"Påmeldte: {visitors}\");",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        7
+      ],
+      "herrings": {
+        "5": "312 er et helt vanlig tall. Variabelen er uskyldig.",
+        "6": "Denne linjen bruker WriteLine med stor L, og den bygger fint. Sammenlign den med linjen under."
+      },
+      "motives": [
+        {
+          "text": "Metoden heter WriteLine med stor L. C# skiller mellom store og små bokstaver også i metodenavn.",
+          "correct": true
+        },
+        {
+          "text": "Man kan ikke kalle Console to ganger etter hverandre.",
+          "correct": false
+        },
+        {
+          "text": "Interpolerte strenger kan ikke sendes til Console.",
+          "correct": false
+        }
+      ],
+      "explain": "C# skiller mellom store og små bokstaver i alle navn: variabler, properties og metoder. Writeline og WriteLine er to forskjellige navn, og bare det ene finnes.",
+      "fix": "Console.WriteLine($\"Påmeldte: {visitors}\");",
+      "after": "Én bokstav, ett problem mindre. Kassereren har lovet å bruke autofullføring neste gang.",
+      "hint": "Sammenlign de to Console-linjene bokstav for bokstav."
+    },
+    {
+      "title": "Veien uten retur",
+      "brief": "Siste fil: siden som viser hvilket rom hvert fag holder til i.",
+      "file": "RoomGuide.cs",
+      "witness": {
+        "who": "Sara, elevrådsleder",
+        "text": "Den sier at «not all code paths return a value». Men jeg har jo return der, tre ganger!"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "RoomGuide.cs(3,19): error CS0161:",
+          "kind": ""
+        },
+        {
+          "text": "  'RoomGuide.RoomFor(string)': not all",
+          "kind": ""
+        },
+        {
+          "text": "  code paths return a value",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 1 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class RoomGuide",
+        "{",
+        "    public string RoomFor(string subject)",
+        "    {",
+        "        if (subject == \"Realfag\")",
+        "            return \"Rom 204\";",
+        "        if (subject == \"Media\")",
+        "            return \"Studio B\";",
+        "        if (subject == \"Idrett\")",
+        "            return \"Gymsalen\";",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        11
+      ],
+      "herrings": {
+        "3": "Kompilatoren peker på metodenavnet fordi metoden som helhet bryter løftet sitt. Hvor i metoden mangler det noe?",
+        "5": "Denne sjekken er grei. Men hva skjer hvis faget er noe helt annet, for eksempel Musikk?",
+        "10": "Denne return-en er riktig. Men hva skjer etter den siste if-en?"
+      },
+      "motives": [
+        {
+          "text": "Hvis faget ikke er ett av de tre, når metoden slutten uten å returnere noe.",
+          "correct": true
+        },
+        {
+          "text": "Man kan ikke ha flere return i samme metode.",
+          "correct": false
+        },
+        {
+          "text": "if uten krøllparenteser kan ikke inneholde return.",
+          "correct": false
+        }
+      ],
+      "explain": "Metoden lover å returnere en string. Hvis noen spør om «Musikk», passer ingen av if-ene, og metoden kommer til slutten uten svar. Kompilatoren krever at alle veier gjennom metoden gir en verdi:",
+      "fix": "    return \"Spør i resepsjonen\";\n}",
+      "after": "Byggloggen er grønn. Sara feiret med å laste siden på nytt tjue ganger.",
+      "hint": "Hva returnerer metoden hvis noen spør om et fag som ikke står der?"
+    }
+  ]
+}

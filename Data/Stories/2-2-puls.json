@@ -1,0 +1,279 @@
+{
+  "id": "puls",
+  "title": "Treningsappen Puls",
+  "difficulty": 2,
+  "hearts": 5,
+  "base": 150,
+  "sprite": "dumbbell",
+  "tagline": "40 000 nye brukere i januar, rare tall i appen og en ukeoversikt som henger.",
+  "topics": [
+    "Tekst + tall",
+    "Feil løkkevariabel",
+    "Datoformat",
+    "TimeSpan"
+  ],
+  "intro": [
+    "Detektiv, det er januar, og halve Norge har bestemt seg for å trene mer.",
+    "Treningsappen Puls har fått 40 000 nye brukere på en uke, og anmeldelsene i appbutikken raser.",
+    "Utviklingsteamet er to personer som ikke har sovet siden nyttår. Hjelp dem."
+  ],
+  "ending": [
+    "Puls har fått fem stjerner i appbutikken igjen, og brukerne logger økter som aldri før.",
+    "Teamet har innført én regel: ingen kode går ut i januar uten at noen andre har lest den.",
+    "Og du? Du fikk gratis abonnement. Ingen unnskyldninger nå, detektiv."
+  ],
+  "cases": [
+    {
+      "title": "Kalorier i tusentall",
+      "brief": "Første klage: brukere får helt vanvittige kalorital.",
+      "file": "Summary.cs",
+      "witness": {
+        "who": "Anmeldelse i appbutikken",
+        "text": "Jeg løp og syklet i dag. Appen sier at jeg har forbrent 300450 kalorier. Jeg er god, men ikke SÅ god. Én stjerne."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] Calories(run: 300, bike: 450)",
+          "kind": "info"
+        },
+        {
+          "text": "  => \"Forbrent: 300450 kcal\"",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Calories(run: 0, bike: 200)",
+          "kind": "info"
+        },
+        {
+          "text": "  => \"Forbrent: 0200 kcal\"",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class Summary",
+        "{",
+        "    public string Calories(int run, int bike)",
+        "    {",
+        "        var label = \"Forbrent: \";",
+        "        var text = label + run + bike + \" kcal\";",
+        "        return text;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        6
+      ],
+      "herrings": {
+        "5": "Etiketten er riktig. Men legg merke til at den er en string, og at den står først.",
+        "7": "return gir bare tilbake teksten den fikk."
+      },
+      "motives": [
+        {
+          "text": "+ leses fra venstre. Når det første leddet er en string, blir run og bike limt på som tekst i stedet for å legges sammen.",
+          "correct": true
+        },
+        {
+          "text": "int kan ikke legges sammen med +.",
+          "correct": false
+        },
+        {
+          "text": "kcal må lagres i en egen variabel.",
+          "correct": false
+        }
+      ],
+      "explain": "\"Forbrent: \" + run gir teksten \"Forbrent: 300\". Deretter limes bike på som tekst, og du får \"Forbrent: 300450\". Regn ut summen først:",
+      "fix": "var text = $\"{label}{run + bike} kcal\";",
+      "after": "750 kalorier. Mye mer realistisk. Men nå henger appen for noen brukere...",
+      "hint": "C# leser + fra venstre mot høyre. Hva blir \"Forbrent: \" + 300?"
+    },
+    {
+      "title": "Uka som aldri tok slutt",
+      "brief": "Brukere melder at appen fryser når de åpner ukeoversikten.",
+      "file": "WeekView.cs",
+      "witness": {
+        "who": "Supportmedarbeider",
+        "text": "Appen henger seg helt når folk åpner ukeoversikten. Telefonen blir varm. Én bruker sa at batteriet gikk fra 80 til 20 prosent."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[WARN] 08:14:02 WeekView.Build() har kjørt i 30 s",
+          "kind": "warn"
+        },
+        {
+          "text": "[WARN] 08:14:32 WeekView.Build() har kjørt i 60 s",
+          "kind": "warn"
+        },
+        {
+          "text": "[ERR]  08:15:02 Request timeout: /api/week",
+          "kind": ""
+        }
+      ],
+      "lines": [
+        "public class WeekView",
+        "{",
+        "    public List<string> Build(List<Workout> workouts)",
+        "    {",
+        "        var days = new List<string>();",
+        "        for (int i = 0; i < 7; i++)",
+        "        {",
+        "            var count = 0;",
+        "            for (int j = 0; j < workouts.Count; i++)",
+        "            {",
+        "                if ((int)workouts[j].Date.DayOfWeek == i)",
+        "                    count++;",
+        "            }",
+        "            days.Add($\"Dag {i}: {count} økter\");",
+        "        }",
+        "        return days;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        9
+      ],
+      "herrings": {
+        "6": "Den ytre løkka ser riktig ut: fra 0 til 6, én runde per dag.",
+        "11": "Sammenligningen er grei. Men hvor mange ganger kjører den?",
+        "14": "Hit kommer programmet aldri. Noe holder det fast lenger opp."
+      },
+      "motives": [
+        {
+          "text": "Den indre løkka øker i i stedet for j. j blir aldri større, så løkka slutter aldri.",
+          "correct": true
+        },
+        {
+          "text": "DayOfWeek kan ikke gjøres om til int.",
+          "correct": false
+        },
+        {
+          "text": "En liste kan ikke ha mer enn 7 elementer.",
+          "correct": false
+        }
+      ],
+      "explain": "Den indre løkka sjekker j < workouts.Count, men øker i. j står fast på 0, så betingelsen er alltid sann, og løkka går i det uendelige. En klassisk kopier-og-lim-feil:",
+      "fix": "for (int j = 0; j < workouts.Count; j++)",
+      "after": "Ukeoversikten laster på et blunk, og telefonene har kjølt seg ned.",
+      "hint": "Se på hvilken variabel hver løkke sjekker, og hvilken variabel den øker."
+    },
+    {
+      "title": "Måned 32",
+      "brief": "Nå ser datoene i treningshistorikken merkelige ut.",
+      "file": "History.cs",
+      "witness": {
+        "who": "Bruker",
+        "text": "Øktene mine står med datoer som 15.32.2027 og 03.07.2027. Jeg trente i januar, ikke i måned 32!"
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] Format(2027-01-15 07:32) => \"15.32.2027 kl. 07:32\"",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Format(2027-01-03 18:07) => \"03.07.2027 kl. 18:07\"",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class History",
+        "{",
+        "    public string Format(Workout w)",
+        "    {",
+        "        var date = w.Date.ToString(\"dd.mm.yyyy\");",
+        "        var time = w.Date.ToString(\"HH:mm\");",
+        "        return $\"{date} kl. {time}\";",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        5
+      ],
+      "herrings": {
+        "6": "Her betyr mm minutter, og det er riktig for et klokkeslett. Sammenlign med linjen over.",
+        "7": "return setter bare sammen to tekster. De er feil allerede før de kommer hit."
+      },
+      "motives": [
+        {
+          "text": "Små mm betyr minutter. Måned skrives med store MM.",
+          "correct": true
+        },
+        {
+          "text": "yyyy gir feil årstall.",
+          "correct": false
+        },
+        {
+          "text": "ToString kan ikke ta imot en formatstreng.",
+          "correct": false
+        }
+      ],
+      "explain": "I .NET-formatstrenger betyr MM måned og mm minutter. «dd.mm.yyyy» setter inn minuttene der måneden skulle stått. Derfor ble klokka 07:32 til måned 32.",
+      "fix": "var date = w.Date.ToString(\"dd.MM.yyyy\");",
+      "after": "Datoene stemmer. 15. januar er mye mer troverdig enn måned 32.",
+      "hint": "Klokkeslettet ser riktig ut, men datoen gjør det ikke. Sammenlign formatstrengene på de to linjene."
+    },
+    {
+      "title": "Den stjålne timen",
+      "brief": "Siste sak: lange økter ser altfor korte ut.",
+      "file": "Workout.cs",
+      "witness": {
+        "who": "Bruker",
+        "text": "Jeg syklet i 1 time og 15 minutter. Appen sier 15 minutter. Den har stjålet en hel time av treningen min!"
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] Duration 01:15:00 => \"15 min\"",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Duration 00:45:00 => \"45 min\"",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Duration 02:05:00 => \"5 min\"",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class Workout",
+        "{",
+        "    public DateTime Start { get; set; }",
+        "    public DateTime End { get; set; }",
+        "",
+        "    public string DurationText()",
+        "    {",
+        "        TimeSpan duration = End - Start;",
+        "        return $\"{duration.Minutes} min\";",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        9
+      ],
+      "herrings": {
+        "3": "Starttidspunktet lagres helt fint.",
+        "8": "End - Start gir et TimeSpan på 1 time og 15 minutter. Loggen viser at varigheten er riktig."
+      },
+      "motives": [
+        {
+          "text": "Minutes er bare minuttdelen (0–59). Hele varigheten i minutter heter TotalMinutes.",
+          "correct": true
+        },
+        {
+          "text": "End - Start blir feil når økta går over en time.",
+          "correct": false
+        },
+        {
+          "text": "Et TimeSpan kan ikke vises i en streng.",
+          "correct": false
+        }
+      ],
+      "explain": "TimeSpan har både Minutes og TotalMinutes. Minutes er bare minuttdelen: 01:15:00 har Minutes = 15. TotalMinutes er hele lengden: 75. Økter under en time så riktige ut, så ingen merket noe i testingen.",
+      "fix": "return $\"{(int)duration.TotalMinutes} min\";",
+      "after": "75 minutter. Brukeren har fått timen sin tilbake.",
+      "hint": "Økter under en time vises riktig. Hva skjer med det som er over 60 minutter?"
+    }
+  ]
+}

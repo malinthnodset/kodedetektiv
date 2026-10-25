@@ -1,0 +1,306 @@
+{
+  "id": "aurora",
+  "title": "Romstasjonen Aurora",
+  "difficulty": 3,
+  "hearts": 4,
+  "base": 200,
+  "sprite": "rocket",
+  "tagline": "Feil i styresystemet til en romstasjon, 400 km over jorda. Ingen enkel omstart.",
+  "topics": [
+    "Closures i løkker",
+    "Heltallsoverflyt",
+    "Lat LINQ",
+    "Referanselikhet"
+  ],
+  "intro": [
+    "Detektiv, du har fått en sak fra veldig langt unna.",
+    "Romstasjonen Aurora går i bane 400 km over jorda med fire astronauter om bord. Styresystemet ble oppdatert fra bakken for to dager siden.",
+    "Siden da har stasjonen oppført seg merkelig. Vi kan ikke bare skru den av og på. Hver feil må finnes før vi sender en ny oppdatering."
+  ],
+  "ending": [
+    "Oppdateringen er sendt, og Aurora går i en stabil bane igjen.",
+    "Astronautene sendte et bilde av Norge sett fra verdensrommet, med hilsen til Bugavdelingen.",
+    "Fire feil som bare viser seg under spesielle forhold: når løkker lager funksjoner, når tall blir store, når LINQ er lat, og når to like ting ikke er den samme tingen. Du er klar for hva som helst nå."
+  ],
+  "cases": [
+    {
+      "title": "Fire dyser, én avfyring",
+      "brief": "Dag 1. Stasjonen skal justere banen med fire styredyser.",
+      "file": "Thrusters.cs",
+      "witness": {
+        "who": "Astronaut Hansen",
+        "text": "Vi ba om å fyre av dyse 0, 1, 2 og 3. Systemet prøvde å fyre av dyse 4 fire ganger, og den finnes ikke. Banen ble ikke justert."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] Planlegger avfyring av 4 dyser",
+          "kind": "info"
+        },
+        {
+          "text": "[ERR]  Fire(4): dyse finnes ikke",
+          "kind": ""
+        },
+        {
+          "text": "[ERR]  Fire(4): dyse finnes ikke",
+          "kind": ""
+        },
+        {
+          "text": "[ERR]  Fire(4): dyse finnes ikke",
+          "kind": ""
+        },
+        {
+          "text": "[ERR]  Fire(4): dyse finnes ikke",
+          "kind": ""
+        }
+      ],
+      "lines": [
+        "public class Thrusters",
+        "{",
+        "    public void Burn()",
+        "    {",
+        "        var actions = new List<Action>();",
+        "        for (int i = 0; i < 4; i++)",
+        "        {",
+        "            actions.Add(() => Fire(i));",
+        "        }",
+        "        _log.Info($\"Planlegger avfyring av {actions.Count} dyser\");",
+        "        foreach (var action in actions)",
+        "            action();",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        8
+      ],
+      "herrings": {
+        "6": "Løkka teller riktig fra 0 til 3. Men hva er i når funksjonene faktisk kjører?",
+        "10": "Det er planlagt fire avfyringer, helt riktig. Spørsmålet er hvilke dyser de peker på.",
+        "12": "Her kjøres funksjonene. Det er her feilen viser seg, men ikke her den ble laget."
+      },
+      "motives": [
+        {
+          "text": "Lambdaen fanger selve variabelen i, ikke verdien. Når den kjører, er løkka ferdig og i er 4.",
+          "correct": true
+        },
+        {
+          "text": "List<Action> kan bare holde én funksjon om gangen.",
+          "correct": false
+        },
+        {
+          "text": "Fire() tar ikke imot en int.",
+          "correct": false
+        }
+      ],
+      "explain": "En lambda husker selve variabelen, ikke verdien den hadde da lambdaen ble laget. Alle fire lambdaene deler samme i, og når de kjører etter løkka, er i blitt 4. Lag en ny variabel for hver runde:",
+      "fix": "int thruster = i;\nactions.Add(() => Fire(thruster));",
+      "after": "Fire dyser, fire avfyringer. Banen er justert. Men nedtellingen til neste forsyningsferd ser rar ut...",
+      "hint": "Alle avfyringene bruker dyse 4. Hvilken verdi har i når lambdaene faktisk kjører?"
+    },
+    {
+      "title": "Minus nitten dager",
+      "brief": "Dag 2. Nedtellingen til neste forsyningsferd viser et umulig tall.",
+      "file": "Countdown.cs",
+      "witness": {
+        "who": "Astronaut Okafor",
+        "text": "Neste forsyningsferd er om 30 dager. Klokka viser minus 19 dager. Mannskapet lurer på om vi har gått glipp av den."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] ToMilliseconds(10) => 864000000",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] ToMilliseconds(24) => 2073600000",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] ToMilliseconds(30) => -1702967296",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class Countdown",
+        "{",
+        "    public int ToMilliseconds(int days)",
+        "    {",
+        "        int ms = days * 24 * 60 * 60 * 1000;",
+        "        return ms;",
+        "    }",
+        "",
+        "    public TimeSpan Remaining(int days)",
+        "    {",
+        "        return TimeSpan.FromMilliseconds(ToMilliseconds(days));",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        5
+      ],
+      "herrings": {
+        "3": "Returtypen er en del av problemet, men regnestykket går galt før den kommer i bruk. Hvor blir tallet for stort?",
+        "6": "return gir bare tilbake det som allerede er regnet ut.",
+        "11": "FromMilliseconds gjør jobben sin. Den får bare et negativt tall inn."
+      },
+      "motives": [
+        {
+          "text": "Regnestykket blir større enn en int kan holde (ca. 2,1 milliarder), og tallet går rundt til negativt.",
+          "correct": true
+        },
+        {
+          "text": "TimeSpan kan ikke vise mer enn 24 dager.",
+          "correct": false
+        },
+        {
+          "text": "Ganging med 1000 gir avrundingsfeil.",
+          "correct": false
+        }
+      ],
+      "explain": "En int kan holde opp til 2 147 483 647. 30 dager i millisekunder er 2 592 000 000, og da går tallet rundt til negativt. Ingen feilmelding, bare et feil svar. 10 og 24 dager gikk fint, så testene besto. Regn i long fra start:",
+      "fix": "public long ToMilliseconds(int days)\n{\n    return days * 24L * 60 * 60 * 1000;\n}",
+      "after": "30 dager. Forsyningsferden er der den skal være. Men sensorene oppfører seg rart...",
+      "hint": "Hva er det største tallet en int kan holde? Regn ut 30 dager i millisekunder."
+    },
+    {
+      "title": "Sensorene som ble lest to ganger",
+      "brief": "Dag 3. Strømforbruket er det dobbelte av det normale.",
+      "file": "Telemetry.cs",
+      "witness": {
+        "who": "Flygeleder på bakken",
+        "text": "Hver sensor blir lest to ganger per måling. Det tapper batteriene, og verdiene i rapporten henger ikke sammen: maks er lavere enn snittet!"
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] Sensor O2-1 lest",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Sensor O2-2 lest",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Sensor O2-1 lest",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Sensor O2-2 lest",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Rapport: snitt 21.3 %, maks 21.1 %",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class Telemetry",
+        "{",
+        "    public string Report(List<ISensor> sensors)",
+        "    {",
+        "        var readings = sensors.Select(s => s.Read());",
+        "",
+        "        var avg = readings.Average();",
+        "        var max = readings.Max();",
+        "",
+        "        return $\"Rapport: snitt {avg:F1} %, maks {max:F1} %\";",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        5
+      ],
+      "herrings": {
+        "7": "Average() gjør jobben sin. Men hva skjer når den ber om verdiene?",
+        "8": "Max() er uskyldig, men legg merke til at den også ber om verdiene. Hvor mange ganger blir sensorene lest?",
+        "10": "Formateringen viser bare tallene den får."
+      },
+      "motives": [
+        {
+          "text": "Select er lat og kjøres på nytt hver gang noen går gjennom readings. Sensorene leses én gang for Average og én gang til for Max.",
+          "correct": true
+        },
+        {
+          "text": "Average og Max kan ikke brukes på samme liste.",
+          "correct": false
+        },
+        {
+          "text": "Select kan bare brukes på tall.",
+          "correct": false
+        }
+      ],
+      "explain": "LINQ-spørringer som Select kjøres ikke når de skrives, men hver gang noen går gjennom resultatet (deferred execution). Average() og Max() går gjennom readings hver for seg, så sensorene leses to ganger og gir litt ulike verdier. Lag en liste med en gang:",
+      "fix": "var readings = sensors.Select(s => s.Read()).ToList();",
+      "after": "Én lesing per sensor, og maks er høyere enn snittet igjen. Én sak igjen.",
+      "hint": "Hvor mange ganger blir readings gått gjennom, og hva skjer med sensorene hver gang?"
+    },
+    {
+      "title": "To like porter",
+      "brief": "Dag 4. Et forsyningsfartøy skal legge til, men stasjonen nekter.",
+      "file": "Docking.cs",
+      "witness": {
+        "who": "Pilot på forsyningsfartøyet",
+        "text": "Vi ligger helt stille foran port 2. Koordinatene våre er nøyaktig de samme som stasjonens: X 12, Y 4. Stasjonen sier fortsatt «Feil port». Vi har ikke drivstoff til å vente lenge."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] Expected: Port(12, 4)",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Incoming: Port(12, 4)",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] CanDock => False",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class Port",
+        "{",
+        "    public int X { get; }",
+        "    public int Y { get; }",
+        "    public Port(int x, int y) { X = x; Y = y; }",
+        "    public override string ToString() => $\"Port({X}, {Y})\";",
+        "}",
+        "",
+        "public class Docking",
+        "{",
+        "    public bool CanDock(Port incoming, Port expected)",
+        "    {",
+        "        return incoming == expected;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        1,
+        13
+      ],
+      "herrings": {
+        "5": "Konstruktøren setter X og Y riktig. Loggen viser at begge portene har samme verdier.",
+        "6": "ToString er bare for loggen. Den viser at verdiene er like, men det er ikke det == sjekker.",
+        "11": "Metoden får inn to porter, slik den skal."
+      },
+      "motives": [
+        {
+          "text": "Port er en class. == sjekker om det er det samme objektet i minnet, ikke om verdiene er like.",
+          "correct": true
+        },
+        {
+          "text": "X og Y må ha set for å kunne sammenlignes.",
+          "correct": false
+        },
+        {
+          "text": "ToString gir feil koordinater.",
+          "correct": false
+        }
+      ],
+      "explain": "For klasser sjekker == som standard referanselikhet: er dette det samme objektet? To Port-objekter med like verdier er fortsatt to forskjellige objekter. En record sammenligner verdiene i stedet:",
+      "fix": "public record Port(int X, int Y);",
+      "after": "Port 2 er åpen, og forsyningsfartøyet har lagt til. Det er kaffe om bord.",
+      "hint": "Hva sjekker == egentlig når det brukes på to objekter av en class?"
+    }
+  ]
+}

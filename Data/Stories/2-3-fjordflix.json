@@ -1,0 +1,283 @@
+{
+  "id": "fjordflix",
+  "title": "Fjordflix",
+  "difficulty": 2,
+  "hearts": 5,
+  "base": 150,
+  "sprite": "tv",
+  "tagline": "En strømmetjeneste med klemte bilder, rare stjerner og et søk som ikke finner noe.",
+  "topics": [
+    "Kopier og lim",
+    "Avrunding",
+    "Uforanderlige strenger",
+    "Tidlig return"
+  ],
+  "intro": [
+    "Ny sak, detektiv. Fjordflix er en norsk strømmetjeneste for dokumentarer om fjell, fjorder og fisk.",
+    "De lanserte en ny versjon i går kveld. I morges var kundeservice nedringt.",
+    "Ingenting krasjer. Alt ser bare litt feil ut. Det er de verste sakene."
+  ],
+  "ending": [
+    "Fjordflix er tilbake. Bildene er skarpe, stjernene stemmer, og søket finner endelig «Torsken som ville bli laks».",
+    "Alle fire feilene var i kode som så riktig ut ved første øyekast, og ingen av dem krasjet.",
+    "Neste gang noe ser litt rart ut, vet du hvor du skal lete. Godt jobbet."
+  ],
+  "cases": [
+    {
+      "title": "De klemte bildene",
+      "brief": "Morgen. Alle forsidebildene ser rare ut.",
+      "file": "Thumbnail.cs",
+      "witness": {
+        "who": "Seer",
+        "text": "Alle bildene ser klemte ut. Fjellene er brede og flate som pannekaker. Selv elgen ser ut som en pølse."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] Resize(1920x1080, 0.25) => 480x480",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Resize(1280x720, 0.25) => 320x320",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class Thumbnail",
+        "{",
+        "    public Size Resize(Size original, double scale)",
+        "    {",
+        "        int width = (int)(original.Width * scale);",
+        "        int height = (int)(original.Width * scale);",
+        "        return new Size(width, height);",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        6
+      ],
+      "herrings": {
+        "5": "Bredden er riktig: 1920 × 0,25 = 480. Se på loggen. Hvilken verdi er feil?",
+        "7": "Size får verdiene den blir gitt. Den er uskyldig."
+      },
+      "motives": [
+        {
+          "text": "Høyden regnes ut fra original.Width i stedet for original.Height. Linjen ble kopiert uten å bli endret.",
+          "correct": true
+        },
+        {
+          "text": "(int) runder bildestørrelsen feil.",
+          "correct": false
+        },
+        {
+          "text": "scale må være en int.",
+          "correct": false
+        }
+      ],
+      "explain": "Linje 6 er en kopi av linje 5, men noen glemte å bytte Width til Height. Derfor blir alle bilder kvadratiske. Kopier-og-lim er en av de vanligste feilkildene som finnes.",
+      "fix": "int height = (int)(original.Height * scale);",
+      "after": "Elgen ser ut som en elg igjen. Neste klage kommer fra en dokumentarskaper.",
+      "hint": "Bredden i loggen er riktig, men høyden er det ikke. Hvor kommer høyden fra?"
+    },
+    {
+      "title": "Halve stjerner",
+      "brief": "En dokumentarskaper klager på karakteren til filmen sin.",
+      "file": "Rating.cs",
+      "witness": {
+        "who": "Dokumentarskaper",
+        "text": "Filmen min har snitt 4,5 fra hundrevis av seere, men Fjordflix viser 4 stjerner. En annen film med snitt 3,5 viser også 4. Det er urettferdig!"
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] Stars(4.5) => 4",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Stars(3.5) => 4",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Stars(4.6) => 5",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Stars(2.5) => 2",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class Rating",
+        "{",
+        "    public int Stars(double average)",
+        "    {",
+        "        if (average < 0 || average > 5)",
+        "            throw new ArgumentException(\"Ugyldig snitt\");",
+        "",
+        "        return (int)Math.Round(average);",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        8
+      ],
+      "herrings": {
+        "5": "Gyldighetssjekken slipper 4,5 gjennom, helt riktig.",
+        "6": "Unntaket kastes bare for ugyldige verdier, og det er ingen unntak i loggen."
+      },
+      "motives": [
+        {
+          "text": "Math.Round runder ,5 til nærmeste partall som standard. 4,5 blir 4 og 3,5 blir 4.",
+          "correct": true
+        },
+        {
+          "text": "(int) kutter alltid desimalene før avrundingen skjer.",
+          "correct": false
+        },
+        {
+          "text": "double kan ikke lagre 4,5 nøyaktig.",
+          "correct": false
+        }
+      ],
+      "explain": "Math.Round bruker «banker's rounding» som standard: tall som ender på ,5 rundes til nærmeste partall. Det jevner ut avrundingsfeil i store summer, men overrasker alle andre. Be om vanlig avrunding:",
+      "fix": "return (int)Math.Round(average, MidpointRounding.AwayFromZero);",
+      "after": "4,5 blir 5 stjerner. Dokumentarskaperen sendte en takkemail med 14 utropstegn.",
+      "hint": "Det er bare tall som ender på ,5 som blir feil. Hva gjør Math.Round med akkurat dem?"
+    },
+    {
+      "title": "Mellomrommet som overlevde",
+      "brief": "Søket finner ikke titler som brukerne vet at finnes.",
+      "file": "Search.cs",
+      "witness": {
+        "who": "Seer",
+        "text": "Jeg søkte på «Torsken som ville bli laks» og fikk null treff. Jeg kopierte tittelen rett fra forsiden!"
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] Search(\" Torsken som ville bli laks \") => 0 treff",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] Search(\"torsken som ville bli laks\") => 1 treff",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class Search",
+        "{",
+        "    public List<Movie> Find(List<Movie> movies, string query)",
+        "    {",
+        "        query.Trim();",
+        "        var hits = new List<Movie>();",
+        "        foreach (var m in movies)",
+        "        {",
+        "            if (m.Title.Equals(query, StringComparison.OrdinalIgnoreCase))",
+        "                hits.Add(m);",
+        "        }",
+        "        return hits;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        5
+      ],
+      "herrings": {
+        "7": "Løkka går gjennom alle filmene, slik den skal.",
+        "9": "Sammenligningen ignorerer til og med store og små bokstaver. Den er grei. Men hva sammenligner den med?",
+        "10": "Treffene legges til riktig. Problemet er at det aldri blir noen."
+      },
+      "motives": [
+        {
+          "text": "Strenger kan ikke endres. Trim() lager en ny streng, men resultatet blir kastet.",
+          "correct": true
+        },
+        {
+          "text": "Trim() fjerner bare mellomrom midt i teksten.",
+          "correct": false
+        },
+        {
+          "text": "Equals kan ikke brukes på titler med mellomrom.",
+          "correct": false
+        }
+      ],
+      "explain": "Strenger i C# er uforanderlige (immutable). Trim() endrer ikke query, men returnerer en ny, trimmet streng. Når du ikke tar vare på den, forsvinner den. Det samme gjelder ToUpper(), Replace() og alle andre strengmetoder:",
+      "fix": "query = query.Trim();",
+      "after": "Torsken er funnet. Søket gir treff også når folk kopierer med mellomrom.",
+      "hint": "Kan en streng i C# endres? Hva skjer med resultatet fra Trim()?"
+    },
+    {
+      "title": "Søket som ga opp",
+      "brief": "Siste sak: abonnenter blir stengt ute fra sine egne profiler.",
+      "file": "Profiles.cs",
+      "witness": {
+        "who": "Abonnent",
+        "text": "Vi er fire i familien. Jeg kommer inn på profilen min, men barna får beskjed om at profilen deres ikke finnes. De står jo rett der i listen!"
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] HasProfile(\"Mamma\") => true",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] HasProfile(\"Emil\") => false",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] HasProfile(\"Sofie\") => false",
+          "kind": "info"
+        },
+        {
+          "text": "  (profiler: Mamma, Pappa, Emil, Sofie)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Profiles",
+        "{",
+        "    private readonly List<string> _names;",
+        "",
+        "    public bool HasProfile(string name)",
+        "    {",
+        "        foreach (var n in _names)",
+        "        {",
+        "            if (n == name)",
+        "                return true;",
+        "            else",
+        "                return false;",
+        "        }",
+        "        return false;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        11,
+        12
+      ],
+      "herrings": {
+        "7": "foreach går gjennom alle navnene. I teorien.",
+        "9": "Sammenligningen er riktig. Den treffer når navnet stemmer.",
+        "14": "Denne return false er faktisk riktig. Den skal kjøre når hele lista er sjekket. Men kommer løkka så langt?"
+      },
+      "motives": [
+        {
+          "text": "else return false avslutter metoden etter første navn. Resten av lista blir aldri sjekket.",
+          "correct": true
+        },
+        {
+          "text": "foreach kan bare gå gjennom lister med tall.",
+          "correct": false
+        },
+        {
+          "text": "== fungerer ikke for navn.",
+          "correct": false
+        }
+      ],
+      "explain": "Løkka sjekker bare det første navnet. Er det ikke treff, returnerer else-grenen false med en gang, og løkka får aldri se på resten. Fjern else og la return false etter løkka gjøre jobben:",
+      "fix": "foreach (var n in _names)\n{\n    if (n == name)\n        return true;\n}\nreturn false;",
+      "after": "Emil og Sofie er inne. Familiekvelden med «Torsken som ville bli laks» er reddet.",
+      "hint": "Bare den første profilen blir funnet. Hva skjer i løkka når første navn ikke stemmer?"
+    }
+  ]
+}

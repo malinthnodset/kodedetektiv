@@ -1,0 +1,300 @@
+{
+  "id": "pote",
+  "title": "Dyrebutikken Pote",
+  "difficulty": 1,
+  "hearts": 6,
+  "base": 100,
+  "sprite": "cat",
+  "tagline": "En liten dyrebutikk har fått ny kasse-app, og butikken åpner om en time.",
+  "topics": [
+    "Parenteser",
+    "Scope",
+    "= mot ==",
+    "Ikke tildelt variabel"
+  ],
+  "intro": [
+    "God morgen, rookie. I dag handler det om katter, hunder og én svært stresset butikkeier.",
+    "Dyrebutikken Pote har fått en ny kasse-app laget av eierens nevø, Jonas. Han er i militæret og svarer ikke på telefonen.",
+    "Appen bygger ikke, og butikken åpner om en time. Finn feilene én etter én."
+  ],
+  "ending": [
+    "Kassen piper, og den første sekken med kattemat er solgt.",
+    "Jonas ringte i lunsjpausen. Han hadde skrevet hele appen på telefonen på bussen, uten å bygge den én eneste gang.",
+    "Butikkeieren har gitt deg et gavekort. Bruk det på noe med fire bein."
+  ],
+  "cases": [
+    {
+      "title": "Parentesen som manglet",
+      "brief": "Første bygg. Kompilatoren stopper allerede på lagerfilen.",
+      "file": "Stock.cs",
+      "witness": {
+        "who": "Butikkeier",
+        "text": "Datamaskinen sier noe om en parentes. Jeg ser parenteser overalt i den koden! Hvilken er det som er feil?"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "Stock.cs(7,24): error CS1026: ) expected",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 1 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Stock",
+        "{",
+        "    public int CatFood { get; set; } = 12;",
+        "",
+        "    public string Status()",
+        "    {",
+        "        if (CatFood < 5",
+        "        {",
+        "            return \"Bestill mer kattemat\";",
+        "        }",
+        "        return \"Nok på lager\";",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        7
+      ],
+      "herrings": {
+        "3": "= 12 gir propertyen en startverdi. Det er lov og helt riktig.",
+        "5": "Metodedeklarasjonen har både ( og ). Den er uskyldig.",
+        "8": "Denne { er helt grei. Kompilatoren ble bare forvirret fordi linjen over aldri ble ferdig."
+      },
+      "motives": [
+        {
+          "text": "Betingelsen i if åpnes med ( men lukkes aldri med ).",
+          "correct": true
+        },
+        {
+          "text": "< kan ikke brukes på properties.",
+          "correct": false
+        },
+        {
+          "text": "if må alltid ha en else.",
+          "correct": false
+        }
+      ],
+      "explain": "Hver ( trenger en ). I if (CatFood < 5 mangler sluttparentesen, så kompilatoren vet ikke hvor betingelsen slutter.",
+      "fix": "if (CatFood < 5)",
+      "after": "Lagerstatusen fungerer. Det er 12 sekker kattemat igjen, så ingen panikk der.",
+      "hint": "Tell parentesene i if-linjen. Hver ( trenger en )."
+    },
+    {
+      "title": "Rabatten som rømte",
+      "brief": "Kasse-appen skal gi rabatt til faste kunder. Kompilatoren nekter.",
+      "file": "Discount.cs",
+      "witness": {
+        "who": "Butikkeier",
+        "text": "Den sier at «discount» ikke finnes. Men den står jo rett der, noen linjer over!"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "Discount.cs(11,32): error CS0103: The name 'discount'",
+          "kind": ""
+        },
+        {
+          "text": "  does not exist in the current context",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 1 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Discount",
+        "{",
+        "    public decimal Apply(decimal price, bool isMember)",
+        "    {",
+        "        if (isMember)",
+        "        {",
+        "            var discount = 0.1m;",
+        "            Console.WriteLine(\"Medlem!\");",
+        "        }",
+        "",
+        "        return price - price * discount;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        7,
+        11
+      ],
+      "herrings": {
+        "5": "if-en er grei. Spørsmålet er hva som skjer med variabelen når blokken er ferdig.",
+        "8": "Utskriften er uskyldig.",
+        "9": "Denne } lukker if-blokken som den skal. Men hva tar den med seg?"
+      },
+      "motives": [
+        {
+          "text": "discount lages inne i if-blokken og slutter å finnes ved }. return-linjen ser den ikke.",
+          "correct": true
+        },
+        {
+          "text": "0.1m er ikke et gyldig tall.",
+          "correct": false
+        },
+        {
+          "text": "decimal kan ikke ganges med decimal.",
+          "correct": false
+        }
+      ],
+      "explain": "En variabel lever bare inne i krøllparentesene der den ble laget. Det kalles scope. discount forsvinner på linje 9, så return-linjen kan ikke bruke den. Lag variabelen utenfor if-en:",
+      "fix": "decimal discount = 0;\nif (isMember)\n{\n    discount = 0.1m;\n}\nreturn price - price * discount;",
+      "after": "Faste kunder får 10 % igjen. En dame med tre dachshunder ble svært fornøyd.",
+      "hint": "Hvor blir variabelen laget, og hvor blir den brukt? Se på krøllparentesene rundt."
+    },
+    {
+      "title": "Ett likhetstegn for lite",
+      "brief": "Kassen skal sjekke om en kunde har fylt opp stempelkortet.",
+      "file": "StampCard.cs",
+      "witness": {
+        "who": "Butikkeier",
+        "text": "Nå sier den at den ikke kan gjøre om int til bool. Jeg vil bare vite om kunden har 10 stempler!"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "StampCard.cs(7,13): error CS0029: Cannot implicitly",
+          "kind": ""
+        },
+        {
+          "text": "  convert type 'int' to 'bool'",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 1 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class StampCard",
+        "{",
+        "    public int Stamps { get; set; }",
+        "",
+        "    public bool IsFull()",
+        "    {",
+        "        if (Stamps = 10)",
+        "        {",
+        "            return true;",
+        "        }",
+        "        return false;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        7
+      ],
+      "herrings": {
+        "3": "Stamps er en int, og det er riktig for å telle stempler.",
+        "5": "Metoden lover å returnere en bool, og det gjør den. Feilen ligger inne i den.",
+        "9": "return true er riktig når kortet er fullt. Men kommer vi i det hele tatt hit?"
+      },
+      "motives": [
+        {
+          "text": "= tilordner en verdi. For å sammenligne trenger du ==.",
+          "correct": true
+        },
+        {
+          "text": "Man kan ikke sammenligne med tallet 10.",
+          "correct": false
+        },
+        {
+          "text": "if kan ikke inneholde return.",
+          "correct": false
+        }
+      ],
+      "explain": "Stamps = 10 betyr «sett Stamps til 10», og resultatet er en int. if trenger en bool, så kompilatoren stopper. Med == spør du i stedet om Stamps er lik 10:",
+      "fix": "if (Stamps == 10)",
+      "after": "Stempelkortet virker. Den første kunden har fått en gratis tyggeleke.",
+      "hint": "Hva er forskjellen på = og == i C#?"
+    },
+    {
+      "title": "Totalen uten verdi",
+      "brief": "Siste byggfeil, i selve kassen.",
+      "file": "Checkout.cs",
+      "witness": {
+        "who": "Butikkeier",
+        "text": "«Use of unassigned local variable»? Jeg skjønner ikke engang ordene. Butikken åpner om fem minutter!"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "Checkout.cs(8,13): error CS0165: Use of unassigned",
+          "kind": ""
+        },
+        {
+          "text": "  local variable 'total'",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 1 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Checkout",
+        "{",
+        "    public decimal Sum(List<decimal> prices)",
+        "    {",
+        "        decimal total;",
+        "        foreach (var price in prices)",
+        "        {",
+        "            total += price;",
+        "        }",
+        "",
+        "        return total;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        5
+      ],
+      "herrings": {
+        "6": "foreach over en liste med priser er helt riktig.",
+        "8": "Kompilatoren klager her fordi det er første gang noen prøver å lese total. Men hvilken verdi fikk den da den ble laget?",
+        "11": "return er grei. Problemet starter da variabelen ble laget."
+      },
+      "motives": [
+        {
+          "text": "total blir deklarert uten startverdi, så += har ingenting å legge til.",
+          "correct": true
+        },
+        {
+          "text": "foreach kan ikke brukes på en List<decimal>.",
+          "correct": false
+        },
+        {
+          "text": "decimal må skrives med stor D.",
+          "correct": false
+        }
+      ],
+      "explain": "En lokal variabel må ha en verdi før den leses. total += price betyr total = total + price, men total har ingen verdi ennå. Gi den en startverdi:",
+      "fix": "decimal total = 0;",
+      "after": "Kassen piper. Dørene åpner, og den første kunden er en golden retriever med eieren på slep.",
+      "hint": "Hvilken verdi har total før løkka starter?"
+    }
+  ]
+}

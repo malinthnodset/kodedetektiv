@@ -1,0 +1,307 @@
+{
+  "id": "krona",
+  "title": "Krona Bank",
+  "difficulty": 3,
+  "hearts": 4,
+  "base": 200,
+  "sprite": "coin",
+  "tagline": "Penger som forsvinner, saldoer som lyver og en kunde som så noen andres betaling.",
+  "topics": [
+    "double og penger",
+    "Manglende await",
+    "struct-kopi",
+    "static-felt"
+  ],
+  "intro": [
+    "Detektiv, dette er alvorlig. Krona Bank er en liten nettbank med 80 000 kunder.",
+    "I natt kom det første varselet fra Finanstilsynet. Kunder melder om penger som forsvinner og saldoer som ikke stemmer.",
+    "Koden kompilerer, testene er grønne, og alt fungerte i testmiljøet. Feilene dukker bare opp i produksjon. Du har fire hjerter. Bruk dem med omhu."
+  ],
+  "ending": [
+    "Krona Bank har betalt tilbake hver eneste krone, og Finanstilsynet har lukket saken.",
+    "Alle fire feilene kompilerte, besto testene og fungerte perfekt for én bruker om gangen. Først med ekte kunder og ekte penger viste de seg.",
+    "Banksjefen tilbød deg jobb. Du takket nei. Bugavdelingen trenger deg."
+  ],
+  "cases": [
+    {
+      "title": "Ti øre for lite",
+      "brief": "07:12. En kunde får ikke betalt en regning, selv om pengene står på kontoen.",
+      "file": "Account.cs",
+      "witness": {
+        "who": "Kunde",
+        "text": "Jeg satte inn 0,70 og 0,10, så jeg har 0,80 kr. Jeg prøver å betale en regning på 0,80, og banken sier at jeg ikke har dekning!"
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] 07:12:01 Balance: 0,80 kr",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 07:12:03 CanPay(0,80) => false",
+          "kind": "info"
+        },
+        {
+          "text": "  (debug: _balance = 0.7999999999999999)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Account",
+        "{",
+        "    private double _balance;",
+        "",
+        "    public void Deposit(double amount)",
+        "    {",
+        "        _balance += amount;",
+        "    }",
+        "",
+        "    public bool CanPay(double amount)",
+        "    {",
+        "        return _balance >= amount;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        3
+      ],
+      "herrings": {
+        "5": "Parametertypen er en del av problemet, men den starter et annet sted. Hvor lagres pengene?",
+        "7": "+= er riktig. Problemet er hva slags tall det legger sammen.",
+        "12": "Sammenligningen er logisk riktig: 0,80 >= 0,80 burde gi true. Se på debug-linjen i loggen. Hvor kommer den rare saldoen fra?"
+      },
+      "motives": [
+        {
+          "text": "double lagrer tall i totallssystemet og kan ikke representere 0,10 nøyaktig. Penger skal lagres som decimal.",
+          "correct": true
+        },
+        {
+          "text": "+= runder alltid ned.",
+          "correct": false
+        },
+        {
+          "text": ">= fungerer ikke for desimaltall.",
+          "correct": false
+        }
+      ],
+      "explain": "double er et binært flyttall. 0,1 kan ikke lagres nøyaktig i totallssystemet, på samme måte som 1/3 ikke kan skrives nøyaktig som desimaltall. 0,70 + 0,10 blir 0,7999999999999999. decimal er laget for penger og regner i titallssystemet:",
+      "fix": "private decimal _balance;",
+      "after": "Kunden fikk betalt regningen på 80 øre. Men det ligger flere varsler i køen...",
+      "hint": "Se på debug-linjen i loggen. Hvilken type tall gir slike desimaler?"
+    },
+    {
+      "title": "Overføringen som aldri skjedde",
+      "brief": "09:30. Noen overføringer forsvinner sporløst.",
+      "file": "TransferController.cs",
+      "witness": {
+        "who": "Kunde",
+        "text": "Jeg overførte 5 000 kr til sparekontoen. Appen sa «Overføring fullført». Men ingen av kontoene har endret seg, og jeg har allerede fortalt alle at pengene er spart."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] 09:30:01 Transfer 5000 kr started",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 09:30:01 Response: 200 OK",
+          "kind": "info"
+        },
+        {
+          "text": "[ERR]  09:30:02 Unobserved task exception:",
+          "kind": ""
+        },
+        {
+          "text": "  DbUpdateConcurrencyException",
+          "kind": ""
+        }
+      ],
+      "lines": [
+        "public class TransferController : ControllerBase",
+        "{",
+        "    public async Task<IActionResult> Transfer(TransferRequest req)",
+        "    {",
+        "        var from = await _db.Accounts.FindAsync(req.FromId);",
+        "        var to = await _db.Accounts.FindAsync(req.ToId);",
+        "",
+        "        from.Balance -= req.Amount;",
+        "        to.Balance += req.Amount;",
+        "",
+        "        _db.SaveChangesAsync();",
+        "        return Ok(\"Overføring fullført\");",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        11
+      ],
+      "herrings": {
+        "5": "FindAsync blir awaitet riktig, og kontoene blir funnet.",
+        "8": "Trekket fra kontoen er riktig, men det skjer bare i minnet. Når blir det lagret?",
+        "12": "Svaret sendes for tidlig, men det er et symptom. Hvorfor venter ikke koden på lagringen?"
+      },
+      "motives": [
+        {
+          "text": "SaveChangesAsync blir ikke awaitet. Svaret sendes før lagringen er ferdig, og feilen blir aldri fanget.",
+          "correct": true
+        },
+        {
+          "text": "FindAsync returnerer null for sparekontoer.",
+          "correct": false
+        },
+        {
+          "text": "async-metoder kan ikke returnere Ok().",
+          "correct": false
+        }
+      ],
+      "explain": "Uten await starter lagringen i bakgrunnen, og metoden går rett videre til return Ok(...). Kunden får beskjed om at alt gikk bra før databasen har svart. Når lagringen feiler, er det ingen som fanger unntaket. Kompilatoren gir bare en advarsel (CS4014):",
+      "fix": "await _db.SaveChangesAsync();",
+      "after": "Overføringene lagres, og feil vises til kunden. Men noe er galt med selve kontoene også...",
+      "hint": "Loggen viser at svaret ble sendt før feilen kom. Hvilken linje venter ikke på det den starter?"
+    },
+    {
+      "title": "Innskuddet som traff en kopi",
+      "brief": "12:15. Innskudd blir registrert, men saldoen står stille.",
+      "file": "Bank.cs",
+      "witness": {
+        "who": "Kunde",
+        "text": "Jeg satte inn 1 000 kr i automaten. Kvitteringen sier «Innskudd registrert». Saldoen er nøyaktig den samme som før."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] 12:15:00 Saldo for 4411: 2350 kr",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 12:15:04 Deposit(id: 4411, 1000 kr) registrert",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 12:15:09 Saldo for 4411: 2350 kr",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public struct Account",
+        "{",
+        "    public int Id;",
+        "    public decimal Balance;",
+        "}",
+        "",
+        "public class Bank",
+        "{",
+        "    private readonly List<Account> _accounts = new();",
+        "",
+        "    public void Deposit(int id, decimal amount)",
+        "    {",
+        "        int i = _accounts.FindIndex(a => a.Id == id);",
+        "        var account = _accounts[i];",
+        "        account.Balance += amount;",
+        "        _log.Info($\"Deposit(id: {id}, {amount} kr) registrert\");",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        1,
+        14
+      ],
+      "herrings": {
+        "9": "Lista er laget riktig. Spørsmålet er hva slags ting den inneholder.",
+        "13": "FindIndex finner riktig konto. Ellers hadde den returnert -1, og koden hadde krasjet.",
+        "15": "Saldoen økes, men på hva? Tenk på hva account egentlig er."
+      },
+      "motives": [
+        {
+          "text": "Account er en struct. _accounts[i] gir en kopi, og det er kopien som får pengene.",
+          "correct": true
+        },
+        {
+          "text": "decimal kan ikke økes med +=.",
+          "correct": false
+        },
+        {
+          "text": "FindIndex finner feil konto.",
+          "correct": false
+        }
+      ],
+      "explain": "En struct er en verditype. Når du henter den ut av lista, får du en kopi, og endringer på kopien påvirker ikke originalen. Med class hadde du fått en referanse til det samme objektet. Gjør Account til en class, eller skriv kopien tilbake:",
+      "fix": "account.Balance += amount;\n_accounts[i] = account;",
+      "after": "Tusenlappen er på kontoen. Det siste varselet er det merkeligste av alle.",
+      "hint": "Hva er forskjellen på en struct og en class når du henter et element ut av en liste?"
+    },
+    {
+      "title": "Den delte betalingen",
+      "brief": "15:47. En kunde ringer i sjokk.",
+      "file": "PaymentSession.cs",
+      "witness": {
+        "who": "Kunde",
+        "text": "Jeg skulle betale en regning på 349 kr. Bekreftelsessiden viste 12 800 kr til en mottaker jeg aldri har hørt om. Heldigvis trykket jeg avbryt."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] 15:47:01 user 1102 SetPending(349, Strøm AS)",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 15:47:01 user 2087 SetPending(12800, Bilforhandler)",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 15:47:02 user 1102 ConfirmText",
+          "kind": "info"
+        },
+        {
+          "text": "  => \"Betal 12800 kr til Bilforhandler?\"",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class PaymentSession",
+        "{",
+        "    private static decimal _pendingAmount;",
+        "    private static string _pendingRecipient;",
+        "",
+        "    public void SetPending(decimal amount, string recipient)",
+        "    {",
+        "        _pendingAmount = amount;",
+        "        _pendingRecipient = recipient;",
+        "    }",
+        "",
+        "    public string ConfirmText()",
+        "    {",
+        "        return $\"Betal {_pendingAmount} kr til {_pendingRecipient}?\";",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        3,
+        4
+      ],
+      "herrings": {
+        "6": "Metoden tar imot riktige verdier. Loggen viser at kunde 1102 satte 349 kr.",
+        "8": "Tilordningen er riktig for én bruker. Men hvor lagres verdien, og hvem deler den?",
+        "14": "Teksten viser bare det som ligger i feltene. Hvorfor lå noen andres beløp der?"
+      },
+      "motives": [
+        {
+          "text": "Feltene er static og deles av alle brukere. Den siste som setter et beløp, overskriver alle andres.",
+          "correct": true
+        },
+        {
+          "text": "decimal kan ikke vise beløp over 10 000.",
+          "correct": false
+        },
+        {
+          "text": "Strenginterpolasjon blander verdier når det er mange brukere.",
+          "correct": false
+        }
+      ],
+      "explain": "static betyr at det finnes én kopi av feltet for hele programmet, ikke én per bruker. Med én tester fungerer alt. Med tusenvis av samtidige kunder overskriver de hverandres betalinger. Fjern static, så får hver økt sine egne verdier:",
+      "fix": "private decimal _pendingAmount;\nprivate string _pendingRecipient;",
+      "after": "Hver kunde ser sine egne betalinger igjen. Krona Bank kan puste ut.",
+      "hint": "To kunder satte et beløp i samme sekund. Hvor lagres beløpet, og hvem deler det?"
+    }
+  ]
+}

@@ -1,0 +1,303 @@
+{
+  "id": "brodbiten",
+  "title": "Rookie på Brødbiten",
+  "difficulty": 1,
+  "hearts": 6,
+  "base": 100,
+  "sprite": "bread",
+  "tagline": "Første oppdrag: få bakeriets nettbutikk i gang før fredag.",
+  "topics": [
+    "Semikolon",
+    "Store/små bokstaver",
+    "Krøllparenteser",
+    "Null"
+  ],
+  "intro": [
+    "Velkommen til Bugavdelingen, rookie. Jeg er Inspektør Bit.",
+    "Bakeriet Brødbiten skal åpne nettbutikk på fredag. Utvikleren deres, Viggo, dro på ferie i går, og nå vil ikke koden engang bygge.",
+    "Fire feil står mellom bakeriet og lanseringen. Start med byggloggen. Den lyver sjelden, men den peker ikke alltid på riktig sted."
+  ],
+  "ending": [
+    "Nettbutikken er oppe, og de første bestillingene ruller inn.",
+    "Viggo ringte fra Kanariøyene. Han innrømmet at han skrev det meste av koden klokka tre om natten, kvelden før ferien.",
+    "Ingen sabotør denne gangen, bare en trøtt utvikler. Du har fortjent en kanelbolle, rookie."
+  ],
+  "cases": [
+    {
+      "title": "Det glemte tegnet",
+      "brief": "Byggserveren lyser rødt. Bakerens datter, som kan litt koding, har funnet den første feilmeldingen.",
+      "file": "Product.cs",
+      "witness": {
+        "who": "Bakerens datter",
+        "text": "Jeg prøvde å bygge prosjektet, men det stopper med en gang. Noe med Product.cs. Jeg har ikke rørt den filen!"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "Product.cs(8,43): error CS1002: ; expected",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 1 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Product",
+        "{",
+        "    public string Name { get; set; }",
+        "    public decimal Price { get; set; }",
+        "",
+        "    public string Label()",
+        "    {",
+        "        var text = $\"{Name} - {Price} kr\"",
+        "        return text;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        8
+      ],
+      "herrings": {
+        "3": "Properties med { get; set; } trenger ikke semikolon på slutten. Den er uskyldig.",
+        "6": "En metodedeklarasjon skal ikke ha semikolon. Den er helt grei.",
+        "9": "Denne linjen er pent avsluttet med semikolon. Se på linjen over."
+      },
+      "motives": [
+        {
+          "text": "Setningen mangler semikolon på slutten, så kompilatoren vet ikke hvor den slutter.",
+          "correct": true
+        },
+        {
+          "text": "Interpolerte strenger må starte med @ i stedet for $.",
+          "correct": false
+        },
+        {
+          "text": "Man kan ikke bruke decimal inne i en tekststreng.",
+          "correct": false
+        }
+      ],
+      "explain": "I C# må hver setning avsluttes med semikolon. Uten det tror kompilatoren at linje 8 og 9 er én lang setning, og gir opp.",
+      "fix": "var text = $\"{Name} - {Price} kr\";",
+      "after": "Ett tegn, og prosjektet bygger et stykke lenger. Men byggloggen er fortsatt rød...",
+      "hint": "Les feilmeldingen nøye. Hvilket tegn sier kompilatoren at den savner?"
+    },
+    {
+      "title": "Navnet som ikke fantes",
+      "brief": "Neste feil gjelder kundene. Viggo rakk å skrive en velkomsthilsen før han dro.",
+      "file": "Customer.cs",
+      "witness": {
+        "who": "Bakerens datter",
+        "text": "Nå klager den på Customer.cs. Den sier at noe ikke finnes, men jeg ser jo at det står der!"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "Customer.cs(8,26): error CS0103: The name 'name'",
+          "kind": ""
+        },
+        {
+          "text": "  does not exist in the current context",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 1 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Customer",
+        "{",
+        "    public string Name { get; set; }",
+        "    public string Email { get; set; }",
+        "",
+        "    public string Greeting()",
+        "    {",
+        "        return $\"Hei, {name}! Takk for bestillingen.\";",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        8
+      ],
+      "herrings": {
+        "3": "Name er definert helt fint, med stor N. Hvem er det som prøver å bruke et navn som ikke finnes?",
+        "4": "Email blir ikke brukt i det hele tatt. Den har alibi.",
+        "6": "Metoden er deklarert riktig. Feilen ligger inne i den."
+      },
+      "motives": [
+        {
+          "text": "C# skiller mellom store og små bokstaver. name og Name er to forskjellige navn.",
+          "correct": true
+        },
+        {
+          "text": "Name må være private for at metoden skal kunne bruke den.",
+          "correct": false
+        },
+        {
+          "text": "Det er ikke lov å bruke utropstegn i en streng.",
+          "correct": false
+        }
+      ],
+      "explain": "C# er case-sensitivt. Propertyen heter Name med stor N, men koden ber om name med liten n. For kompilatoren er det to helt ulike ting.",
+      "fix": "return $\"Hei, {Name}! Takk for bestillingen.\";",
+      "after": "Én stor bokstav. C# er nøye på sånt. Viggo har tydeligvis skrevet fort.",
+      "hint": "Sammenlign navnet i feilmeldingen med navnene som faktisk er deklarert i klassen. Se på bokstavene, én for én."
+    },
+    {
+      "title": "Parentesen som forsvant",
+      "brief": "Siste byggfeil. Denne gangen peker loggen på bunnen av filen, der det nesten ikke står noe.",
+      "file": "Order.cs",
+      "witness": {
+        "who": "Bakeren",
+        "text": "Datteren min sier at feilen er på linje 16, men den linjen er jo bare en krøllparentes! Kan en krøllparentes være feil?"
+      },
+      "logTitle": "BYGGLOGG",
+      "log": [
+        {
+          "text": "Build started...",
+          "kind": ""
+        },
+        {
+          "text": "Order.cs(15,5): error CS0106: The modifier 'public'",
+          "kind": ""
+        },
+        {
+          "text": "  is not valid for this item",
+          "kind": ""
+        },
+        {
+          "text": "Order.cs(16,2): error CS1513: } expected",
+          "kind": ""
+        },
+        {
+          "text": "Build FAILED. 2 error(s)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Order",
+        "{",
+        "    public List<Product> Items { get; } = new();",
+        "",
+        "    public decimal Total()",
+        "    {",
+        "        decimal sum = 0;",
+        "        foreach (var item in Items)",
+        "        {",
+        "            sum += item.Price;",
+        "",
+        "        return sum;",
+        "    }",
+        "",
+        "    public int Count() => Items.Count;",
+        "}"
+      ],
+      "culprit": [
+        9,
+        11
+      ],
+      "herrings": {
+        "6": "Denne { har en partner. Tell krøllparentesene par for par.",
+        "13": "Denne } lukker faktisk foreach-blokken, ikke metoden. Det er derfor alt etter den havner feil. Hvor mangler det en?",
+        "15": "Count() er uskyldig. Den ser bare feil ut for kompilatoren fordi den har havnet inne i Total(). Noen glemte å lukke en blokk tidligere.",
+        "16": "Kompilatoren klager her fordi det var her den ga opp å lete etter en sluttparentes. Hvilken { ble aldri lukket?"
+      },
+      "motives": [
+        {
+          "text": "foreach-blokken åpnes med { på linje 9, men lukkes aldri. Alle } etterpå havner ett hakk feil.",
+          "correct": true
+        },
+        {
+          "text": "En metode med foreach kan ikke ha return.",
+          "correct": false
+        },
+        {
+          "text": "Count() må skrives med krøllparenteser i stedet for =>.",
+          "correct": false
+        }
+      ],
+      "explain": "Hver { trenger en }. Når foreach-blokken aldri lukkes, blir } på linje 13 brukt til å lukke foreach. Da ender Count() opp inne i Total(), og kompilatoren går tom for parenteser på slutten av filen. Feilmeldingen peker dit den ga opp, ikke dit feilen er.",
+      "fix": "foreach (var item in Items)\n{\n    sum += item.Price;\n}\nreturn sum;",
+      "after": "Byggloggen er grønn for første gang! Nettbutikken går live på fredag. Nå gjenstår bare den første ordren...",
+      "hint": "Tell krøllparentesene. For hver { skal det finnes en }. Begynn innerst."
+    },
+    {
+      "title": "Adressen som ikke fantes",
+      "brief": "Fredag. Butikken er åpen, og de første ordrene kommer inn. Men lageret ringer i panikk.",
+      "file": "ShippingLabel.cs",
+      "witness": {
+        "who": "Lagerarbeider",
+        "text": "Pakkelappene skrives ut fint for de fleste ordre. Men for noen kunder krasjer hele utskriften. Det ser ut til å gjelde folk som nettopp har registrert seg."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[ERR] 08:12:44 System.NullReferenceException:",
+          "kind": ""
+        },
+        {
+          "text": "  Object reference not set to an instance",
+          "kind": ""
+        },
+        {
+          "text": "  of an object.",
+          "kind": ""
+        },
+        {
+          "text": "  at ShippingLabel.Create(Customer c)",
+          "kind": ""
+        },
+        {
+          "text": "  in ShippingLabel.cs:line 6",
+          "kind": ""
+        }
+      ],
+      "lines": [
+        "public static class ShippingLabel",
+        "{",
+        "    public static string Create(Customer c)",
+        "    {",
+        "        var name = c.Name.ToUpper();",
+        "        var street = c.Address.Street;",
+        "        var zip = c.Address.PostalCode;",
+        "        return $\"{name}\\n{street}\\n{zip}\";",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        6
+      ],
+      "herrings": {
+        "5": "Name er påkrevd ved registrering, så den er alltid fylt ut. Vitnet snakket om nye kunder. Hva mangler nye kunder?",
+        "7": "Den hadde nok krasjet også, men programmet kom aldri så langt. Se på linjenummeret i loggen."
+      },
+      "motives": [
+        {
+          "text": "Address er null for kunder som ikke har lagt inn adresse ennå.",
+          "correct": true
+        },
+        {
+          "text": "ToUpper() krasjer når navnet inneholder æ, ø eller å.",
+          "correct": false
+        },
+        {
+          "text": "\\n er ikke lov inne i en interpolert streng.",
+          "correct": false
+        }
+      ],
+      "explain": "Nye kunder har ikke noe Address-objekt, så c.Address er null. Å lese .Street fra null gir NullReferenceException. Koden kompilerer helt fint. Feilen dukker først opp når programmet kjører.",
+      "fix": "var street = c.Address?.Street ?? \"(adresse mangler)\";",
+      "after": "Pakkelappene skrives ut igjen. Det første brødet er på vei til en sulten kunde.",
+      "hint": "Vitnet nevner nye kunder. Hva er det nye kunder ikke har fylt ut ennå?"
+    }
+  ]
+}

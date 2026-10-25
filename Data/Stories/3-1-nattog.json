@@ -1,0 +1,301 @@
+{
+  "id": "nattog",
+  "title": "Nattoget til Nordlys",
+  "difficulty": 3,
+  "hearts": 4,
+  "base": 200,
+  "sprite": "train",
+  "tagline": "Et nattog, et signalsystem som oppfører seg rart, og ingen tid å miste.",
+  "topics": [
+    "= mot ==",
+    "Skygget variabel",
+    "if uten { }",
+    "Endre liste i løkke"
+  ],
+  "intro": [
+    "Detektiv, våkn opp. Klokka er 23:30.",
+    "Nattoget fra Oslo til Nordlys stasjon har stoppet uten grunn flere ganger, og én gang kjørte det med dørene åpne.",
+    "Dette er ikke byggfeil. All koden kompilerer helt fint, og det er det som gjør det farlig. Loggene er sparsomme, og du har bare fire sjanser."
+  ],
+  "ending": [
+    "Klokka 07:12 ruller nattoget inn på Nordlys stasjon, bare tolv minutter forsinket.",
+    "Signalsystemet ble oppdatert i går kveld, og ingen kjørte testene før det gikk ut.",
+    "Fire feil som alle kompilerte uten et kny. Nå er det deg de ringer når toget står. Velkommen til eliten, detektiv."
+  ],
+  "cases": [
+    {
+      "title": "Dørene som sto åpne",
+      "brief": "23:41, Lillehammer. Konduktøren melder om noe som ikke skal kunne skje.",
+      "file": "DepartureControl.cs",
+      "witness": {
+        "who": "Konduktør",
+        "text": "Toget begynte å rulle mens en passasjer fortsatt sto i døra! Dørsensoren lyste rødt, men systemet sa likevel at vi var klare for avgang."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] 23:41:07 Sensor: False",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 23:41:07 Klar for avgang",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class DepartureControl",
+        "{",
+        "    private readonly IDoorSensor _sensor;",
+        "",
+        "    public bool CanDepart()",
+        "    {",
+        "        bool doorsClosed = _sensor.AllClosed();",
+        "        _log.Info($\"Sensor: {doorsClosed}\");",
+        "",
+        "        if (doorsClosed = true)",
+        "        {",
+        "            _log.Info(\"Klar for avgang\");",
+        "            return true;",
+        "        }",
+        "        return false;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        10
+      ],
+      "herrings": {
+        "7": "Sensoren svarte False, og loggen bekrefter det. Den gjorde jobben sin.",
+        "8": "Loggingen viser riktig verdi. Det er etterpå noe går galt.",
+        "12": "Loggmeldingen er bare et symptom. Hvorfor kom vi i det hele tatt inn i denne blokken?",
+        "13": "return true er riktig når dørene er lukket. Men var de det?"
+      },
+      "motives": [
+        {
+          "text": "= tilordner true i stedet for å sammenligne. Betingelsen blir alltid sann.",
+          "correct": true
+        },
+        {
+          "text": "Sensoren returnerer feil verdi.",
+          "correct": false
+        },
+        {
+          "text": "return true kjører før loggingen er ferdig.",
+          "correct": false
+        }
+      ],
+      "explain": "Ett likhetstegn betyr tilordning, to betyr sammenligning. doorsClosed = true setter variabelen til true, og if-en sjekker resultatet, som alltid er true. Siden variabelen er en bool kompilerer det, med bare en advarsel. Med en bool trenger du ikke sammenligne i det hele tatt:",
+      "fix": "if (doorsClosed)",
+      "after": "Toget venter nå til dørene faktisk er lukket. Men systemet har flere feil, og natten er lang...",
+      "hint": "Sensoren sa False, men programmet gikk likevel inn i if-blokken. Tell likhetstegnene."
+    },
+    {
+      "title": "Toget som ikke ville",
+      "brief": "01:15, Dombås. Toget står stille på åpen strekning.",
+      "file": "Locomotive.cs",
+      "witness": {
+        "who": "Lokfører",
+        "text": "Jeg setter farten til 80, men toget rikker seg ikke. Skjermen viser 0 km/t. Jeg har prøvd tre ganger."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] 01:15:22 Ny fart: 0 km/t",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 01:15:40 Ny fart: 0 km/t",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 01:16:03 Ny fart: 0 km/t",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class Locomotive",
+        "{",
+        "    private int speed;",
+        "    private int maxSpeed = 120;",
+        "",
+        "    public void SetSpeed(int speed)",
+        "    {",
+        "        if (speed > maxSpeed)",
+        "            speed = maxSpeed;",
+        "",
+        "        speed = speed;",
+        "        _log.Info($\"Ny fart: {this.speed} km/t\");",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        11
+      ],
+      "herrings": {
+        "3": "Feltet er deklarert riktig. Spørsmålet er hvem som skriver til det.",
+        "8": "Sammenligningen er grei. 80 er under maks, så linjen under kjører ikke engang.",
+        "9": "Den begrenser parameteren, og det er greit. Men hvor havner verdien til slutt?",
+        "12": "Loggen skriver bare ut feltet. Det er 0 fordi ingen har skrevet til det."
+      },
+      "motives": [
+        {
+          "text": "Parameteren speed skygger for feltet. speed = speed gir parameteren sin egen verdi, og feltet blir aldri satt.",
+          "correct": true
+        },
+        {
+          "text": "maxSpeed overstyrer alltid den nye farten.",
+          "correct": false
+        },
+        {
+          "text": "int kan ikke lagre fart med desimaler, så den rundes ned til 0.",
+          "correct": false
+        }
+      ],
+      "explain": "Parameteren og feltet heter begge speed. Inne i metoden betyr speed alltid parameteren, så speed = speed tilordner den til seg selv. Feltet forblir 0. Bruk this. for å peke på feltet:",
+      "fix": "this.speed = speed;",
+      "after": "Toget ruller igjen. Kompilatoren ga en advarsel om linjen, men ingen leste den.",
+      "hint": "To ting i klassen har samme navn. Hvilken av dem mener koden på hver linje?"
+    },
+    {
+      "title": "Rødt over hele linja",
+      "brief": "03:02, Trondheim. Alle signalene på stasjonen står på rødt.",
+      "file": "SignalBox.cs",
+      "witness": {
+        "who": "Togleder",
+        "text": "Spor 4 er helt tomt, men systemet sier at det er opptatt og blokkerer det. Det samme gjelder alle de andre sporene. Ingen tog kommer seg ut av stasjonen!"
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[WARN] 03:02:10 Spor 4 er opptatt",
+          "kind": "warn"
+        },
+        {
+          "text": "[WARN] 03:02:10 Spor 5 er opptatt",
+          "kind": "warn"
+        },
+        {
+          "text": "[WARN] 03:02:11 Spor 7 er opptatt",
+          "kind": "warn"
+        },
+        {
+          "text": "  (sensordata: spor 4, 5 og 7 er ledige)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class SignalBox",
+        "{",
+        "    public void Update(Track track)",
+        "    {",
+        "        if (track.IsOccupied)",
+        "            SetSignal(track.Id, Signal.Red);",
+        "            _log.Warn($\"Spor {track.Id} er opptatt\");",
+        "            BlockTrack(track.Id);",
+        "",
+        "        Notify(track.Id);",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        5
+      ],
+      "herrings": {
+        "6": "Denne linjen hører faktisk til if-en, og kjører bare når sporet er opptatt. Den er uskyldig.",
+        "7": "Innrykket får det til å se ut som om denne hører til if-en. Men C# bryr seg ikke om innrykk. Hva bestemmer egentlig hva if-en omfatter?",
+        "8": "Innrykket lyver. Denne linjen kjører uansett. Se på if-en: hvor mange linjer gjelder den egentlig for?",
+        "10": "Notify skal kjøre for alle spor. Den er uskyldig."
+      },
+      "motives": [
+        {
+          "text": "Uten krøllparenteser gjelder if bare den første setningen. Linje 7 og 8 kjører alltid.",
+          "correct": true
+        },
+        {
+          "text": "IsOccupied returnerer alltid true.",
+          "correct": false
+        },
+        {
+          "text": "_log.Warn() kaster et unntak som blokkerer sporet.",
+          "correct": false
+        }
+      ],
+      "explain": "Uten { } gjelder en if bare for den neste setningen. Linje 7 og 8 er rykket inn som om de hører til, men C# ignorerer innrykk. Derfor blokkeres hvert eneste spor. Bruk alltid krøllparenteser:",
+      "fix": "if (track.IsOccupied)\n{\n    SetSignal(track.Id, Signal.Red);\n    _log.Warn($\"Spor {track.Id} er opptatt\");\n    BlockTrack(track.Id);\n}",
+      "after": "Signalene skifter til grønt. Innrykk er for mennesker, kompilatoren ser bare på { og }.",
+      "hint": "Ikke stol på innrykket. Hvilke linjer hører egentlig til if-en?"
+    },
+    {
+      "title": "Passasjerlista",
+      "brief": "06:40, Mo i Rana. Mange passasjerer skal av, og systemet krasjer.",
+      "file": "Manifest.cs",
+      "witness": {
+        "who": "Konduktør",
+        "text": "Passasjerlista krasjet med en gang den første passasjeren gikk av. Nå vet vi ikke hvem som er om bord. På forrige stasjon gikk ingen av, og da fungerte alt."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[ERR] 06:40:12 System.InvalidOperationException:",
+          "kind": ""
+        },
+        {
+          "text": "  Collection was modified; enumeration",
+          "kind": ""
+        },
+        {
+          "text": "  operation may not execute.",
+          "kind": ""
+        },
+        {
+          "text": "  at Manifest.Disembark() in Manifest.cs:line 6",
+          "kind": ""
+        }
+      ],
+      "lines": [
+        "public class Manifest",
+        "{",
+        "    public void Disembark(List<Passenger> passengers, string station)",
+        "    {",
+        "        var count = 0;",
+        "        foreach (var p in passengers)",
+        "        {",
+        "            if (p.Destination == station)",
+        "            {",
+        "                passengers.Remove(p);",
+        "                count++;",
+        "            }",
+        "        }",
+        "        _log.Info($\"{count} gikk av i {station}\");",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        10
+      ],
+      "herrings": {
+        "6": "Loggen peker hit fordi det er her neste runde oppdager at lista er endret. Men hvem endret den?",
+        "8": "Sammenligningen slipper gjennom akkurat dem som skal av. Helt riktig.",
+        "11": "Telleren øker bare med én. Den rører ikke lista."
+      },
+      "motives": [
+        {
+          "text": "Lista endres med Remove() mens foreach fortsatt går gjennom den.",
+          "correct": true
+        },
+        {
+          "text": "Sammenligning av strenger med == fungerer ikke for stasjonsnavn.",
+          "correct": false
+        },
+        {
+          "text": "count++ er ikke trådsikkert.",
+          "correct": false
+        }
+      ],
+      "explain": "foreach passer på at lista ikke endres underveis. Så snart Remove() har kjørt, kaster neste runde InvalidOperationException. Derfor gikk alt fint helt til noen faktisk skulle av. RemoveAll gjør jobben trygt:",
+      "fix": "var count = passengers.RemoveAll(p => p.Destination == station);",
+      "after": "Passasjerlista stemmer. Bare én stasjon igjen.",
+      "hint": "Hva gjør koden med lista mens den går gjennom den?"
+    }
+  ]
+}

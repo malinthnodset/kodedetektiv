@@ -1,0 +1,294 @@
+{
+  "id": "billett",
+  "title": "Billettkaoset",
+  "difficulty": 2,
+  "hearts": 5,
+  "base": 150,
+  "sprite": "ticket",
+  "tagline": "Tusenvis av fans, ett billettsystem og en mystisk utvikler som kaller seg «ghost».",
+  "topics": [
+    "Off-by-one",
+    "Feil variabelnavn",
+    "Strengsammenligning",
+    "Heltallsdivisjon"
+  ],
+  "intro": [
+    "Ny sak, detektiv. NordBillett selger billetter til årets største konsert i Fjordarenaen.",
+    "Salget åpnet klokka 10:00. Klokka 10:04 begynte telefonene å ringe.",
+    "I commit-historikken går det samme brukernavnet igjen: «ghost». Ingen i firmaet vet hvem det er. Finn feilene, så finner vi kanskje ghost også."
+  ],
+  "ending": [
+    "Konserten er utsolgt, og alle har fått riktig sete til riktig pris.",
+    "Vi fant ghost. Det var fjorårets sommerpraktikant, som kopierte kode fra et gammelt skoleprosjekt og aldri logget ut av testbrukeren sin.",
+    "Ingen ond vilje. Men nå har NordBillett innført kodegjennomgang før noe går i produksjon. Godt jobbet."
+  ],
+  "cases": [
+    {
+      "title": "Sete nummer null",
+      "brief": "10:04. De første kjøperne melder om rare seter.",
+      "file": "SeatMap.cs",
+      "witness": {
+        "who": "Supportleder",
+        "text": "Ingen har fått sete 1 på første rad, selv om det står ledig. Og nå som salen nesten er full, krasjer kjøpet for alle!"
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[ERR] 10:04:17 System.IndexOutOfRangeException:",
+          "kind": ""
+        },
+        {
+          "text": "  Index was outside the bounds of the array.",
+          "kind": ""
+        },
+        {
+          "text": "  at SeatMap.FirstFree() in SeatMap.cs:line 9",
+          "kind": ""
+        }
+      ],
+      "lines": [
+        "public class SeatMap",
+        "{",
+        "    private readonly Seat[] _seats;",
+        "",
+        "    public Seat FirstFree()",
+        "    {",
+        "        for (int i = 1; i <= _seats.Length; i++)",
+        "        {",
+        "            if (!_seats[i].Taken)",
+        "                return _seats[i];",
+        "        }",
+        "        return null;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        7
+      ],
+      "herrings": {
+        "9": "Det var her den krasjet, men indeksen kom fra et annet sted. Hvem bestemmer hvilke verdier i får?",
+        "10": "Returneringen gir bare tilbake setet den fikk beskjed om. Den er uskyldig.",
+        "12": "return null skjer aldri her. Programmet krasjer før det kommer så langt."
+      },
+      "motives": [
+        {
+          "text": "Arrays starter på indeks 0. Løkka hopper over sete 0 og går én forbi det siste.",
+          "correct": true
+        },
+        {
+          "text": "_seats er null fordi arrayet aldri ble opprettet.",
+          "correct": false
+        },
+        {
+          "text": "Operatoren ! fungerer ikke på bool-properties.",
+          "correct": false
+        }
+      ],
+      "explain": "Et array med 100 seter har indeksene 0 til 99. Løkka starter på 1 (så sete 0 blir aldri solgt) og fortsetter til og med 100 (som ikke finnes). To off-by-one-feil på én linje.",
+      "fix": "for (int i = 0; i < _seats.Length; i++)",
+      "after": "Sete 1 er solgt, og krasjene har stoppet. Commit-meldingen på løkka: «fikset seter lol». Signert ghost.",
+      "hint": "Hva er den første og den siste gyldige indeksen i et array med 100 seter?"
+    },
+    {
+      "title": "Gratiskonserten",
+      "brief": "10:31. Økonomiavdelingen har oppdaget noe som er enda verre enn krasj.",
+      "file": "Cart.cs",
+      "witness": {
+        "who": "Økonomisjef",
+        "text": "Kunder legger billetter i kurven, men i kassen står det 0 kr. Folk får billetter gratis! Vi har allerede gitt bort over 200!"
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] 10:31:02 La til 2 billetter",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 10:31:09 La til 1 billetter",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 10:31:15 Checkout: 0 kr",
+          "kind": "info"
+        },
+        {
+          "text": "  (ingen feilmeldinger registrert)",
+          "kind": "dim"
+        }
+      ],
+      "lines": [
+        "public class Cart",
+        "{",
+        "    private decimal total;",
+        "",
+        "    public void Add(Ticket ticket, int quantity)",
+        "    {",
+        "        decimal Total = ticket.Price * quantity;",
+        "        Console.WriteLine($\"La til {quantity} billetter\");",
+        "    }",
+        "",
+        "    public decimal Checkout()",
+        "    {",
+        "        return total;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        7
+      ],
+      "herrings": {
+        "3": "Feltet total er deklarert helt greit. Spørsmålet er om noen faktisk skriver til det.",
+        "8": "Loggmeldingen dukker opp, så Add() blir faktisk kalt. Se på linjen over.",
+        "13": "Checkout returnerer feltet total, slik den skal. Feltet er bare tomt."
+      },
+      "motives": [
+        {
+          "text": "Linjen lager en ny lokal variabel Total (stor T) i stedet for å legge til i feltet total.",
+          "correct": true
+        },
+        {
+          "text": "quantity er alltid 0 når den kommer inn i metoden.",
+          "correct": false
+        },
+        {
+          "text": "decimal kan ikke ganges med int.",
+          "correct": false
+        }
+      ],
+      "explain": "decimal Total = ... deklarerer en helt ny variabel som bare lever inne i Add(). Den har stor T, og den forsvinner når metoden er ferdig. Feltet total (liten t) forblir 0. Koden kompilerer, så ingen merket noe.",
+      "fix": "total += ticket.Price * quantity;",
+      "after": "Prisene stemmer igjen. Og selvfølgelig: det var ghost som skrev linjen med stor T.",
+      "hint": "Se nøye på store og små bokstaver. Er det samme variabel som blir skrevet til og lest fra?"
+    },
+    {
+      "title": "Pressen i kø",
+      "brief": "18:30. Dørene åpner, og pressefolkene står først i køen.",
+      "file": "AccessControl.cs",
+      "witness": {
+        "who": "Vakt ved inngangen",
+        "text": "Halvparten av journalistene ble avvist. De sverger at de skrev koden nøyaktig slik den sto i mailen: press-2026. Noen av dem ble ganske sinte."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] 18:30:44 IsVip(\"press-2026 \") => false",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 18:30:51 IsVip(\"PRESS-2026\") => true",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 18:31:03 IsVip(\"Press-2026\") => false",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class AccessControl",
+        "{",
+        "    private readonly string[] _vipCodes = { \"FJORD-VIP\", \"PRESS-2026\" };",
+        "",
+        "    public bool IsVip(string enteredCode)",
+        "    {",
+        "        var code = enteredCode.Trim();",
+        "        foreach (var vip in _vipCodes)",
+        "        {",
+        "            if (code == vip)",
+        "                return true;",
+        "        }",
+        "        return false;",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        10
+      ],
+      "herrings": {
+        "3": "Kodene i listen er riktige. Det er sammenligningen med dem som svikter.",
+        "7": "Trim() fjerner mellomrommet på slutten. Det er helt riktig, og ikke problemet.",
+        "13": "return false er riktig når ingen kode matcher. Men hvorfor matchet ingen?"
+      },
+      "motives": [
+        {
+          "text": "== sammenligner strenger nøyaktig, også store og små bokstaver. «press-2026» er ikke lik «PRESS-2026».",
+          "correct": true
+        },
+        {
+          "text": "Trim() fjerner bindestreken fra koden.",
+          "correct": false
+        },
+        {
+          "text": "foreach stopper etter den første koden i listen.",
+          "correct": false
+        }
+      ],
+      "explain": "Strengsammenligning med == er case-sensitiv. Mailen hadde koden med små bokstaver, mens systemet lagret den med store. Bruk en sammenligning som ignorerer store og små bokstaver:",
+      "fix": "if (string.Equals(code, vip, StringComparison.OrdinalIgnoreCase))",
+      "after": "Pressen er inne. Mailen hadde små bokstaver, systemet store. Ghost skrev begge deler.",
+      "hint": "Sammenlign kodene i loggen som ga true og false. Hva skiller dem?"
+    },
+    {
+      "title": "Null prosent solgt",
+      "brief": "19:15. Daglig leder i NordBillett ser på salgsdashboardet og får panikk.",
+      "file": "SalesDashboard.cs",
+      "witness": {
+        "who": "Daglig leder",
+        "text": "Dashboardet sier at vi har solgt 0 % av billettene! Men salen er jo full? Det har stått 0 % hele dagen."
+      },
+      "logTitle": "SERVERLOGG",
+      "log": [
+        {
+          "text": "[INFO] 12:00:00 Progress(2250, 9000) => \"[          ] 0%\"",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 16:00:00 Progress(6750, 9000) => \"[          ] 0%\"",
+          "kind": "info"
+        },
+        {
+          "text": "[INFO] 19:00:00 Progress(9000, 9000) => \"[##########] 100%\"",
+          "kind": "info"
+        }
+      ],
+      "lines": [
+        "public class SalesDashboard",
+        "{",
+        "    public string Progress(int sold, int capacity)",
+        "    {",
+        "        if (capacity <= 0) return \"Ukjent\";",
+        "",
+        "        int percent = sold / capacity * 100;",
+        "        var bar = new string('#', percent / 10);",
+        "        return $\"[{bar,-10}] {percent}%\";",
+        "    }",
+        "}"
+      ],
+      "culprit": [
+        7
+      ],
+      "herrings": {
+        "5": "Sjekken mot 0 hindrer deling på null. Det er god praksis, ikke en feil.",
+        "8": "Baren regnes ut fra percent, som allerede er feil. Hvor ble percent til?",
+        "9": "Formateringen er riktig. Den viser bare tallet den får."
+      },
+      "motives": [
+        {
+          "text": "sold / capacity er heltallsdivisjon og blir 0 helt til salen er full. Ganging med 100 skjer for sent.",
+          "correct": true
+        },
+        {
+          "text": "new string('#', ...) kan ikke lage mer enn 9 tegn.",
+          "correct": false
+        },
+        {
+          "text": "capacity-sjekken returnerer for tidlig.",
+          "correct": false
+        }
+      ],
+      "explain": "Med to int blir 6750 / 9000 lik 0, fordi desimalene kastes. Først da ganges det med 100, og 0 × 100 er fortsatt 0. Gang før du deler, så slipper du å miste desimalene:",
+      "fix": "int percent = sold * 100 / capacity;",
+      "after": "Dashboardet viser 100 % og en full sal. Nå er det på tide å ta en prat med ghost.",
+      "hint": "Regn ut linjen selv med tallene fra loggen, men bare med heltall."
+    }
+  ]
+}
